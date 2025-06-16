@@ -62,18 +62,18 @@ return (
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}
-          className="flex items-center gap-3"
+className="flex items-center gap-3"
         >
           <span className="text-white/80 text-sm">AI Difficulty:</span>
           <select
             value={aiDifficulty}
             onChange={(e) => onDifficultyChange(e.target.value)}
             disabled={loading}
-            className="bg-surface/50 border border-white/20 rounded-lg px-3 py-1 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50"
+            className="bg-gradient-to-r from-primary/20 to-secondary/20 border border-primary/40 rounded-lg px-3 py-1 text-sm text-white shadow-neon-pink focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary focus:shadow-neon-pink"
           >
-            <option value="easy">Easy</option>
-            <option value="medium">Medium</option>
-            <option value="hard">Hard</option>
+            <option value="easy" className="bg-surface text-white">Easy</option>
+            <option value="medium" className="bg-surface text-white">Medium</option>
+            <option value="hard" className="bg-surface text-white">Hard</option>
           </select>
         </motion.div>
       )}
