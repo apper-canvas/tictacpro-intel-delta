@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { toast } from "react-toastify";
+import { useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import GameBoard from "@/components/molecules/GameBoard";
 import ScoreBoard from "@/components/molecules/ScoreBoard";
 import GameStatus from "@/components/molecules/GameStatus";
@@ -8,6 +10,9 @@ import GameControls from "@/components/molecules/GameControls";
 import { gameStateService, scoreService } from "@/services";
 
 const GameContainer = () => {
+  const navigate = useNavigate();
+  const { user, isAuthenticated } = useSelector((state) => state.user);
+  
   const [gameState, setGameState] = useState({
     board: [['', '', ''], ['', '', ''], ['', '', '']],
     currentPlayer: 'X',
@@ -20,10 +25,14 @@ const GameContainer = () => {
   const [aiDifficulty, setAiDifficulty] = useState('easy');
   const [loading, setLoading] = useState(false);
   const [aiThinking, setAiThinking] = useState(false);
+  
   useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
     initializeGame();
-  }, []);
-
+  }, [isAuthenticated]);
   useEffect(() => {
     if (gameState.gameMode === 'ai' && 
         gameState.currentPlayer === 'O' && 
@@ -33,16 +42,27 @@ const GameContainer = () => {
     }
   }, [gameState.currentPlayer, gameState.gameMode, gameState.winner, gameState.isDraw]);
 
-  const initializeGame = async () => {
+const initializeGame = async () => {
     setLoading(true);
     try {
       const [gameData, scoreData] = await Promise.all([
         gameStateService.getGameState(),
         scoreService.getScore()
       ]);
-      setGameState(gameData);
-      setScore(scoreData);
+      
+      if (gameData) {
+        setGameState(gameData);
+      } else {
+        toast.error('Failed to load game state');
+      }
+      
+      if (scoreData) {
+        setScore(scoreData);
+      } else {
+        toast.error('Failed to load score');
+      }
     } catch (error) {
+      console.error('Error initializing game:', error);
       toast.error('Failed to initialize game');
     } finally {
       setLoading(false);
@@ -55,25 +75,34 @@ const GameContainer = () => {
     }
 
     setLoading(true);
-    try {
+try {
       const newGameState = await gameStateService.makeMove(row, col, gameState.currentPlayer);
-      setGameState(newGameState);
+      
+      if (newGameState) {
+        setGameState(newGameState);
 
-      // Update score if game ended
-      if (newGameState.winner || newGameState.isDraw) {
-        const winner = newGameState.winner || 'draw';
-        const newScore = await scoreService.updateScore(winner);
-        setScore(newScore);
-        
-        if (newGameState.winner) {
-          toast.success(`Player ${newGameState.winner} wins!`, {
-            icon: newGameState.winner === 'X' ? '❌' : '⭕'
-          });
-        } else if (newGameState.isDraw) {
-          toast.info("It's a draw!", { icon: '🤝' });
+        // Update score if game ended
+        if (newGameState.winner || newGameState.isDraw) {
+          const winner = newGameState.winner || 'draw';
+          const newScore = await scoreService.updateScore(winner);
+          
+          if (newScore) {
+            setScore(newScore);
+          }
+          
+          if (newGameState.winner) {
+            toast.success(`Player ${newGameState.winner} wins!`, {
+              icon: newGameState.winner === 'X' ? '❌' : '⭕'
+            });
+          } else if (newGameState.isDraw) {
+            toast.info("It's a draw!", { icon: '🤝' });
+          }
         }
+      } else {
+        toast.error('Failed to make move');
       }
     } catch (error) {
+      console.error('Error making move:', error);
       toast.error('Failed to make move');
     } finally {
       setLoading(false);
@@ -99,12 +128,17 @@ setAiThinking(true);
   };
 
   const handleResetGame = async () => {
-    setLoading(true);
-    try {
+try {
       const newGameState = await gameStateService.resetGame();
-      setGameState({ ...newGameState, gameMode: gameState.gameMode });
-      toast.success('New game started!');
+      
+      if (newGameState) {
+        setGameState({ ...newGameState, gameMode: gameState.gameMode });
+        toast.success('New game started!');
+      } else {
+        toast.error('Failed to reset game');
+      }
     } catch (error) {
+      console.error('Error resetting game:', error);
       toast.error('Failed to reset game');
     } finally {
       setLoading(false);
@@ -112,12 +146,17 @@ setAiThinking(true);
   };
 
   const handleResetScore = async () => {
-    setLoading(true);
-    try {
+try {
       const newScore = await scoreService.resetScore();
-      setScore(newScore);
-      toast.success('Score reset!');
+      
+      if (newScore) {
+        setScore(newScore);
+        toast.success('Score reset!');
+      } else {
+        toast.error('Failed to reset score');
+      }
     } catch (error) {
+      console.error('Error resetting score:', error);
       toast.error('Failed to reset score');
     } finally {
       setLoading(false);
@@ -127,12 +166,19 @@ setAiThinking(true);
   const handleToggleGameMode = async () => {
     const newMode = gameState.gameMode === 'two-player' ? 'ai' : 'two-player';
     setLoading(true);
-    try {
+try {
       const newGameState = await gameStateService.updateGameState({ gameMode: newMode });
-      setGameState(newGameState);
-      await handleResetGame();
-      toast.success(`Switched to ${newMode === 'ai' ? 'AI mode' : 'two-player mode'}!`);
-toast.error('Failed to switch game mode');
+      
+      if (newGameState) {
+        setGameState(newGameState);
+        await handleResetGame();
+        toast.success(`Switched to ${newMode === 'ai' ? 'AI mode' : 'two-player mode'}!`);
+      } else {
+        toast.error('Failed to switch game mode');
+      }
+    } catch (error) {
+      console.error('Error switching game mode:', error);
+      toast.error('Failed to switch game mode');
     } finally {
       setLoading(false);
     }
