@@ -7,6 +7,7 @@ import GameBoard from "@/components/molecules/GameBoard";
 import ScoreBoard from "@/components/molecules/ScoreBoard";
 import GameStatus from "@/components/molecules/GameStatus";
 import GameControls from "@/components/molecules/GameControls";
+import GameResultModal from "@/components/molecules/GameResultModal";
 import { gameStateService, scoreService } from "@/services";
 
 const GameContainer = () => {
@@ -21,10 +22,11 @@ const GameContainer = () => {
     isDraw: false,
     gameMode: 'two-player'
   });
-  const [score, setScore] = useState({ playerX: 0, playerO: 0, draws: 0 });
+const [score, setScore] = useState({ playerX: 0, playerO: 0, draws: 0 });
   const [aiDifficulty, setAiDifficulty] = useState('easy');
   const [loading, setLoading] = useState(false);
   const [aiThinking, setAiThinking] = useState(false);
+  const [showResultModal, setShowResultModal] = useState(false);
   
   useEffect(() => {
     if (!isAuthenticated) {
@@ -81,7 +83,7 @@ try {
       if (newGameState) {
         setGameState(newGameState);
 
-        // Update score if game ended
+// Update score if game ended
         if (newGameState.winner || newGameState.isDraw) {
           const winner = newGameState.winner || 'draw';
           const newScore = await scoreService.updateScore(winner);
@@ -90,6 +92,10 @@ try {
             setScore(newScore);
           }
           
+          // Show celebration modal
+          setShowResultModal(true);
+          
+          // Keep existing toast notifications
           if (newGameState.winner) {
             toast.success(`Player ${newGameState.winner} wins!`, {
               icon: newGameState.winner === 'X' ? '❌' : '⭕'
@@ -127,12 +133,14 @@ setAiThinking(true);
     }
   };
 
-  const handleResetGame = async () => {
-try {
+const handleResetGame = async () => {
+    setLoading(true);
+    try {
       const newGameState = await gameStateService.resetGame();
       
       if (newGameState) {
         setGameState({ ...newGameState, gameMode: gameState.gameMode });
+        setShowResultModal(false); // Close modal when starting new game
         toast.success('New game started!');
       } else {
         toast.error('Failed to reset game');
@@ -145,8 +153,9 @@ try {
     }
   };
 
-  const handleResetScore = async () => {
-try {
+const handleResetScore = async () => {
+    setLoading(true);
+    try {
       const newScore = await scoreService.resetScore();
       
       if (newScore) {
@@ -247,9 +256,8 @@ try {
               />
               <span className="text-secondary text-sm">AI is thinking...</span>
             </div>
-          </motion.div>
+</motion.div>
         )}
-)}
 
         <GameControls
           onResetGame={handleResetGame}
@@ -261,6 +269,14 @@ try {
           loading={loading || aiThinking}
         />
       </div>
+
+      {/* Game Result Modal */}
+      <GameResultModal
+        isOpen={showResultModal}
+        winner={gameState.winner}
+        isDraw={gameState.isDraw}
+        onClose={() => setShowResultModal(false)}
+      />
     </motion.div>
   );
 };
