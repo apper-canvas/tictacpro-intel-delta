@@ -1,7 +1,6 @@
 import { toast } from 'react-toastify';
 import aiService from './aiService.js';
 
-// Initialize ApperClient
 const { ApperClient } = window.ApperSDK;
 const apperClient = new ApperClient({
   apperProjectId: import.meta.env.VITE_APPER_PROJECT_ID,
@@ -9,293 +8,263 @@ const apperClient = new ApperClient({
 });
 
 class GameStateService {
+  
   async getGameState() {
     try {
       const params = {
-        Fields: ['Name', 'Tags', 'Owner', 'board', 'current_player', 'winner', 'winning_cells', 'is_draw', 'game_mode']
+        fields: ['Name', 'Tags', 'Owner', 'board', 'current_player', 'winner', 'winning_cells', 'is_draw', 'game_mode']
       };
       
       const response = await apperClient.fetchRecords('game_state', params);
       
       if (!response.success) {
-        console.error(response.message);
-        toast.error(response.message);
-        return null;
+        console.error('Fetch error:', response.message);
+        // If no records exist, create a default one
+        return await this.createDefaultGameState();
       }
       
-      // Return first game state record or default values
+      // Return first game state record or create default if none exist
       if (response.data && response.data.length > 0) {
         const gameState = response.data[0];
-        return {
-          board: gameState.board ? JSON.parse(gameState.board) : [['', '', ''], ['', '', ''], ['', '', '']],
-          currentPlayer: gameState.current_player || 'X',
-          winner: gameState.winner || null,
-          winningCells: gameState.winning_cells ? JSON.parse(gameState.winning_cells) : null,
-          isDraw: gameState.is_draw || false,
-          gameMode: gameState.game_mode || 'two-player'
-        };
+        return this.formatGameStateFromDB(gameState);
       }
       
-      return {
-        board: [['', '', ''], ['', '', ''], ['', '', '']],
-        currentPlayer: 'X',
-        winner: null,
-        winningCells: null,
-        isDraw: false,
-        gameMode: 'two-player'
-      };
+      // No existing game state, create default
+      return await this.createDefaultGameState();
     } catch (error) {
       console.error("Error fetching game state:", error);
-      toast.error("Failed to load game state");
-      return null;
+      // Try to create default game state as fallback
+      return await this.createDefaultGameState();
     }
   }
 
-  async updateGameState(newState) {
+  async createDefaultGameState() {
     try {
-      // Map UI field names to database field names
-      const updateData = {};
-      
-      if (newState.board !== undefined) {
-        updateData.board = JSON.stringify(newState.board);
-      }
-      if (newState.currentPlayer !== undefined) {
-        updateData.current_player = newState.currentPlayer;
-      }
-      if (newState.winner !== undefined) {
-        updateData.winner = newState.winner;
-      }
-      if (newState.winningCells !== undefined) {
-        updateData.winning_cells = newState.winningCells ? JSON.stringify(newState.winningCells) : null;
-      }
-      if (newState.isDraw !== undefined) {
-        updateData.is_draw = newState.isDraw;
-      }
-      if (newState.gameMode !== undefined) {
-        updateData.game_mode = newState.gameMode;
-      }
-      
-      const params = {
-        records: [{
-          Id: 1, // Assuming single game state record with ID 1
-          ...updateData
-        }]
-      };
-      
-      const response = await apperClient.updateRecord('game_state', params);
-      
-      if (!response.success) {
-        console.error(response.message);
-        toast.error(response.message);
-        return null;
-      }
-      
-      if (response.results && response.results.length > 0) {
-        const result = response.results[0];
-        if (result.success) {
-          // Return updated state by getting current state
-          return await this.getGameState();
-        } else {
-          if (result.message) toast.error(result.message);
-          return null;
-        }
-      }
-      
-      return await this.getGameState();
-    } catch (error) {
-      console.error("Error updating game state:", error);
-      toast.error("Failed to update game state");
-      return null;
-    }
-  }
-
-  async resetGame() {
-    try {
-      const resetData = {
+      const defaultGameState = {
+        Name: 'Default Game',
         board: JSON.stringify([['', '', ''], ['', '', ''], ['', '', '']]),
         current_player: 'X',
-        winner: null,
-        winning_cells: null,
-        is_draw: false
+        winner: '',
+        winning_cells: JSON.stringify([]),
+        is_draw: false,
+        game_mode: 'two-player'
       };
-      
+
       const params = {
-        records: [{
-          Id: 1, // Assuming single game state record with ID 1
-          ...resetData
-        }]
+        records: [defaultGameState]
       };
+
+      const response = await apperClient.createRecord('game_state', params);
       
-      const response = await apperClient.updateRecord('game_state', params);
-      
-      if (!response.success) {
-        console.error(response.message);
-        toast.error(response.message);
-        return null;
+      if (response.success && response.results && response.results[0].success) {
+        const createdRecord = response.results[0].data;
+        return this.formatGameStateFromDB(createdRecord);
+      } else {
+        console.error('Failed to create default game state:', response);
+        return this.getDefaultGameStateObject();
       }
-      
-      if (response.results && response.results.length > 0) {
-        const result = response.results[0];
-        if (result.success) {
-          return {
-            board: [['', '', ''], ['', '', ''], ['', '', '']],
-            currentPlayer: 'X',
-            winner: null,
-            winningCells: null,
-            isDraw: false,
-            gameMode: 'two-player'
-          };
-        } else {
-          if (result.message) toast.error(result.message);
-          return null;
-        }
-      }
-      
-      return {
-        board: [['', '', ''], ['', '', ''], ['', '', '']],
-        currentPlayer: 'X',
-        winner: null,
-        winningCells: null,
-        isDraw: false,
-        gameMode: 'two-player'
-      };
     } catch (error) {
-      console.error("Error resetting game:", error);
-      toast.error("Failed to reset game");
-      return null;
+      console.error('Error creating default game state:', error);
+      return this.getDefaultGameStateObject();
     }
+  }
+
+  formatGameStateFromDB(gameState) {
+    return {
+      id: gameState.Id,
+      board: gameState.board ? JSON.parse(gameState.board) : [['', '', ''], ['', '', ''], ['', '', '']],
+      currentPlayer: gameState.current_player || 'X',
+      winner: gameState.winner || null,
+      winningCells: gameState.winning_cells ? JSON.parse(gameState.winning_cells) : [],
+      isDraw: gameState.is_draw || false,
+      gameMode: gameState.game_mode || 'two-player'
+    };
+  }
+
+  getDefaultGameStateObject() {
+    return {
+      board: [['', '', ''], ['', '', ''], ['', '', '']],
+      currentPlayer: 'X',
+      winner: null,
+      winningCells: [],
+      isDraw: false,
+      gameMode: 'two-player'
+    };
   }
 
   async makeMove(row, col, player) {
     try {
       // Get current game state
       const currentState = await this.getGameState();
-      if (!currentState) return null;
-      
-      const newBoard = currentState.board.map(r => [...r]);
-      newBoard[row][col] = player;
-      
-      const winner = this.checkWinner(newBoard);
-      const winningCells = winner ? this.getWinningCells(newBoard) : null;
-      const isDraw = !winner && this.isBoardFull(newBoard);
-      
-      const newState = {
-        board: newBoard,
-        currentPlayer: player === 'X' ? 'O' : 'X',
-        winner,
-        winningCells,
-        isDraw,
-        gameMode: currentState.gameMode
-      };
-      
-      // Update database
-      const updateData = {
-        board: JSON.stringify(newBoard),
-        current_player: newState.currentPlayer,
-        winner: winner,
-        winning_cells: winningCells ? JSON.stringify(winningCells) : null,
-        is_draw: isDraw
-      };
-      
-      const params = {
-        records: [{
-          Id: 1, // Assuming single game state record with ID 1
-          ...updateData
-        }]
-      };
-      
-      const response = await apperClient.updateRecord('game_state', params);
-      
-      if (!response.success) {
-        console.error(response.message);
-        toast.error(response.message);
+      if (!currentState) {
+        toast.error('Failed to load current game state');
         return null;
       }
-      
-      if (response.results && response.results.length > 0) {
-        const result = response.results[0];
-        if (result.success) {
-          return newState;
-        } else {
-          if (result.message) toast.error(result.message);
-          return null;
+
+      // Make the move
+      const newBoard = currentState.board.map(r => [...r]);
+      newBoard[row][col] = player;
+
+      // Check for winner
+      const { winner, winningCells } = this.checkWinner(newBoard);
+      const isDraw = !winner && this.isBoardFull(newBoard);
+      const nextPlayer = winner || isDraw ? currentState.currentPlayer : (player === 'X' ? 'O' : 'X');
+
+      const updatedGameState = {
+        board: newBoard,
+        currentPlayer: nextPlayer,
+        winner: winner,
+        winningCells: winningCells || [],
+        isDraw: isDraw,
+        gameMode: currentState.gameMode
+      };
+
+      // Save to database
+      const savedState = await this.saveGameState(updatedGameState, currentState.id);
+      return savedState || updatedGameState;
+    } catch (error) {
+      console.error('Error making move:', error);
+      toast.error('Failed to make move');
+      return null;
+    }
+  }
+
+  async saveGameState(gameState, existingId = null) {
+    try {
+      const dbGameState = {
+        board: JSON.stringify(gameState.board),
+        current_player: gameState.currentPlayer,
+        winner: gameState.winner || '',
+        winning_cells: JSON.stringify(gameState.winningCells || []),
+        is_draw: gameState.isDraw,
+        game_mode: gameState.gameMode
+      };
+
+      if (existingId) {
+        // Update existing record
+        const params = {
+          records: [{
+            Id: existingId,
+            ...dbGameState
+          }]
+        };
+
+        const response = await apperClient.updateRecord('game_state', params);
+        
+        if (response.success && response.results && response.results[0].success) {
+          return this.formatGameStateFromDB(response.results[0].data);
+        }
+      } else {
+        // Create new record
+        const params = {
+          records: [{
+            Name: 'Game State',
+            ...dbGameState
+          }]
+        };
+
+        const response = await apperClient.createRecord('game_state', params);
+        
+        if (response.success && response.results && response.results[0].success) {
+          return this.formatGameStateFromDB(response.results[0].data);
         }
       }
-      
-      return newState;
+
+      return null;
     } catch (error) {
-      console.error("Error making move:", error);
-      toast.error("Failed to make move");
+      console.error('Error saving game state:', error);
+      return null;
+    }
+  }
+
+  async resetGame() {
+    try {
+      const currentState = await this.getGameState();
+      const resetGameState = {
+        board: [['', '', ''], ['', '', ''], ['', '', '']],
+        currentPlayer: 'X',
+        winner: null,
+        winningCells: [],
+        isDraw: false,
+        gameMode: currentState?.gameMode || 'two-player'
+      };
+
+      const savedState = await this.saveGameState(resetGameState, currentState?.id);
+      return savedState || resetGameState;
+    } catch (error) {
+      console.error('Error resetting game:', error);
+      toast.error('Failed to reset game');
+      return this.getDefaultGameStateObject();
+    }
+  }
+
+  async updateGameState(updates) {
+    try {
+      const currentState = await this.getGameState();
+      if (!currentState) {
+        toast.error('Failed to load current game state');
+        return null;
+      }
+
+      const updatedGameState = { ...currentState, ...updates };
+      const savedState = await this.saveGameState(updatedGameState, currentState.id);
+      return savedState || updatedGameState;
+    } catch (error) {
+      console.error('Error updating game state:', error);
+      toast.error('Failed to update game state');
+      return null;
+    }
+  }
+
+  async getAIMove(difficulty) {
+    try {
+      const currentState = await this.getGameState();
+      if (!currentState) {
+        toast.error('Failed to load game state for AI move');
+        return null;
+      }
+
+      const aiMove = await aiService.getAIMove(currentState.board, difficulty);
+      return aiMove;
+    } catch (error) {
+      console.error('Error getting AI move:', error);
+      toast.error('Failed to get AI move');
       return null;
     }
   }
 
   checkWinner(board) {
-    // Check rows
-    for (let i = 0; i < 3; i++) {
-      if (board[i][0] && board[i][0] === board[i][1] && board[i][1] === board[i][2]) {
-        return board[i][0];
+    const lines = [
+      // Rows
+      [[0,0], [0,1], [0,2]],
+      [[1,0], [1,1], [1,2]],
+      [[2,0], [2,1], [2,2]],
+      // Columns
+      [[0,0], [1,0], [2,0]],
+      [[0,1], [1,1], [2,1]],
+      [[0,2], [1,2], [2,2]],
+      // Diagonals
+      [[0,0], [1,1], [2,2]],
+      [[0,2], [1,1], [2,0]]
+    ];
+
+    for (let line of lines) {
+      const [a, b, c] = line;
+      if (board[a[0]][a[1]] && 
+          board[a[0]][a[1]] === board[b[0]][b[1]] && 
+          board[a[0]][a[1]] === board[c[0]][c[1]]) {
+        return {
+          winner: board[a[0]][a[1]],
+          winningCells: line
+        };
       }
     }
 
-    // Check columns
-    for (let i = 0; i < 3; i++) {
-      if (board[0][i] && board[0][i] === board[1][i] && board[1][i] === board[2][i]) {
-        return board[0][i];
-      }
-    }
-
-    // Check diagonals
-    if (board[0][0] && board[0][0] === board[1][1] && board[1][1] === board[2][2]) {
-      return board[0][0];
-    }
-    if (board[0][2] && board[0][2] === board[1][1] && board[1][1] === board[2][0]) {
-      return board[0][2];
-    }
-
-    return null;
-  }
-
-  getWinningCells(board) {
-    // Check rows
-    for (let i = 0; i < 3; i++) {
-      if (board[i][0] && board[i][0] === board[i][1] && board[i][1] === board[i][2]) {
-        return [i * 3, i * 3 + 1, i * 3 + 2];
-      }
-    }
-
-    // Check columns
-    for (let i = 0; i < 3; i++) {
-      if (board[0][i] && board[0][i] === board[1][i] && board[1][i] === board[2][i]) {
-        return [i, i + 3, i + 6];
-      }
-    }
-
-    // Check diagonals
-    if (board[0][0] && board[0][0] === board[1][1] && board[1][1] === board[2][2]) {
-      return [0, 4, 8];
-    }
-    if (board[0][2] && board[0][2] === board[1][1] && board[1][1] === board[2][0]) {
-      return [2, 4, 6];
-    }
-
-    return null;
+    return { winner: null, winningCells: null };
   }
 
   isBoardFull(board) {
     return board.every(row => row.every(cell => cell !== ''));
-  }
-
-  async getAIMove(difficulty = 'easy') {
-    try {
-      const currentState = await this.getGameState();
-      if (!currentState) return null;
-      
-      return await aiService.getAIMove(currentState.board, difficulty);
-    } catch (error) {
-      console.error("Error getting AI move:", error);
-      return null;
-    }
   }
 }
 
