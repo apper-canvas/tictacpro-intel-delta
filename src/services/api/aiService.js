@@ -32,13 +32,22 @@ class AiService {
     return availableMoves[Math.floor(Math.random() * availableMoves.length)];
   }
 
-  getMediumMove(board, availableMoves, aiPlayer, humanPlayer) {
-    // Medium difficulty: Check for winning move, then random
+getMediumMove(board, availableMoves, aiPlayer, humanPlayer) {
+    // Medium difficulty: Check for winning move, then blocking move, then random
     // Check for winning move
     for (const move of availableMoves) {
       const testBoard = board.map(r => [...r]);
       testBoard[move.row][move.col] = aiPlayer;
       if (this.checkWinner(testBoard) === aiPlayer) {
+        return move;
+      }
+    }
+
+    // Check for blocking move
+    for (const move of availableMoves) {
+      const testBoard = board.map(r => [...r]);
+      testBoard[move.row][move.col] = humanPlayer;
+      if (this.checkWinner(testBoard) === humanPlayer) {
         return move;
       }
     }
