@@ -1,4 +1,5 @@
 import gameStateData from '../mockData/gameState.json';
+import aiService from './aiService.js';
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -110,60 +111,10 @@ class GameStateService {
 
   isBoardFull(board) {
     return board.every(row => row.every(cell => cell !== ''));
-  }
+}
 
-  async getAIMove() {
-    await delay(300);
-    const availableMoves = [];
-    
-    for (let i = 0; i < 3; i++) {
-      for (let j = 0; j < 3; j++) {
-        if (this.data.board[i][j] === '') {
-          availableMoves.push({ row: i, col: j });
-        }
-      }
-    }
-
-    if (availableMoves.length === 0) return null;
-
-    // Simple AI: Check for winning move first, then blocking move, then random
-    const aiPlayer = 'O';
-    const humanPlayer = 'X';
-
-    // Check for winning move
-    for (const move of availableMoves) {
-      const testBoard = this.data.board.map(r => [...r]);
-      testBoard[move.row][move.col] = aiPlayer;
-      if (this.checkWinner(testBoard) === aiPlayer) {
-        return move;
-      }
-    }
-
-    // Check for blocking move
-    for (const move of availableMoves) {
-      const testBoard = this.data.board.map(r => [...r]);
-      testBoard[move.row][move.col] = humanPlayer;
-      if (this.checkWinner(testBoard) === humanPlayer) {
-        return move;
-      }
-    }
-
-    // Take center if available
-    if (this.data.board[1][1] === '') {
-      return { row: 1, col: 1 };
-    }
-
-    // Take corners
-    const corners = [{ row: 0, col: 0 }, { row: 0, col: 2 }, { row: 2, col: 0 }, { row: 2, col: 2 }];
-    const availableCorners = corners.filter(corner => 
-      this.data.board[corner.row][corner.col] === ''
-    );
-    if (availableCorners.length > 0) {
-      return availableCorners[Math.floor(Math.random() * availableCorners.length)];
-    }
-
-    // Random move
-    return availableMoves[Math.floor(Math.random() * availableMoves.length)];
+  async getAIMove(difficulty = 'easy') {
+    return await aiService.getAIMove(this.data.board, difficulty);
   }
 }
 

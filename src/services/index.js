@@ -1,3 +1,11 @@
-export { default as gameStateService } from './api/gameStateService.js';
-export { default as scoreService } from './api/scoreService.js';
-export { default as settingsService } from './api/settingsService.js';
+import settingsService from './api/settingsService.js';
+import scoreService from './api/scoreService.js';
+import gameStateService from './api/gameStateService.js';
+import aiService from './api/aiService.js';
+
+export {
+settingsService,
+  scoreService,
+  gameStateService,
+  aiService
+};

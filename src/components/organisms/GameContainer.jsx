@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { toast } from 'react-toastify';
-import GameBoard from '@/components/molecules/GameBoard';
-import ScoreBoard from '@/components/molecules/ScoreBoard';
-import GameStatus from '@/components/molecules/GameStatus';
-import GameControls from '@/components/molecules/GameControls';
-import { gameStateService, scoreService } from '@/services';
+import React, { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import { toast } from "react-toastify";
+import GameBoard from "@/components/molecules/GameBoard";
+import ScoreBoard from "@/components/molecules/ScoreBoard";
+import GameStatus from "@/components/molecules/GameStatus";
+import GameControls from "@/components/molecules/GameControls";
+import { gameStateService, scoreService } from "@/services";
 
 const GameContainer = () => {
   const [gameState, setGameState] = useState({
@@ -17,9 +17,9 @@ const GameContainer = () => {
     gameMode: 'two-player'
   });
   const [score, setScore] = useState({ playerX: 0, playerO: 0, draws: 0 });
+  const [aiDifficulty, setAiDifficulty] = useState('easy');
   const [loading, setLoading] = useState(false);
   const [aiThinking, setAiThinking] = useState(false);
-
   useEffect(() => {
     initializeGame();
   }, []);
@@ -83,9 +83,9 @@ const GameContainer = () => {
   const handleAIMove = async () => {
     if (gameState.winner || gameState.isDraw) return;
     
-    setAiThinking(true);
+setAiThinking(true);
     try {
-      const aiMove = await gameStateService.getAIMove();
+      const aiMove = await gameStateService.getAIMove(aiDifficulty);
       if (aiMove) {
         setTimeout(() => {
           handleCellClick(aiMove.row, aiMove.col);
@@ -132,13 +132,16 @@ const GameContainer = () => {
       setGameState(newGameState);
       await handleResetGame();
       toast.success(`Switched to ${newMode === 'ai' ? 'AI mode' : 'two-player mode'}!`);
-    } catch (error) {
-      toast.error('Failed to switch game mode');
+toast.error('Failed to switch game mode');
     } finally {
       setLoading(false);
     }
   };
 
+  const handleDifficultyChange = (newDifficulty) => {
+    setAiDifficulty(newDifficulty);
+    toast.success(`AI difficulty set to ${newDifficulty}!`);
+  };
   const containerVariants = {
     initial: { opacity: 0 },
     animate: { 
@@ -190,23 +193,25 @@ const GameContainer = () => {
             animate={{ opacity: 1, y: 0 }}
             className="text-center mb-4"
           >
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-secondary/20 rounded-full">
+<div className="inline-flex items-center gap-2 px-4 py-2 bg-secondary/20 rounded-full">
               <motion.div
                 animate={{ rotate: 360 }}
                 transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-              >
-                <ApperIcon name="Bot" className="w-4 h-4 text-secondary" />
-              </motion.div>
+                className="w-4 h-4 border-2 border-secondary border-t-transparent rounded-full"
+              />
               <span className="text-secondary text-sm">AI is thinking...</span>
             </div>
           </motion.div>
         )}
+)}
 
         <GameControls
           onResetGame={handleResetGame}
           onResetScore={handleResetScore}
           gameMode={gameState.gameMode}
           onToggleGameMode={handleToggleGameMode}
+          aiDifficulty={aiDifficulty}
+          onDifficultyChange={handleDifficultyChange}
           loading={loading || aiThinking}
         />
       </div>
