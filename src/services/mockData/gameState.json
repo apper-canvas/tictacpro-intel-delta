@@ -1,0 +1,12 @@
+{
+  "board": [
+    ["", "", ""],
+    ["", "", ""],
+    ["", "", ""]
+  ],
+  "currentPlayer": "X",
+  "winner": null,
+  "winningCells": null,
+  "isDraw": false,
+  "gameMode": "two-player"
+}
