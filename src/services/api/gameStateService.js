@@ -22,8 +22,8 @@ const mockGameState = {
 class GameStateService {
   async getGameState() {
     try {
-      const params = {
-        fields: ['Name', 'Tags', 'Owner', 'board', 'current_player', 'winner', 'winning_cells', 'is_draw', 'game_mode']
+const params = {
+        fields: ['Name', 'Tags', 'Owner', 'CreatedOn', 'CreatedBy', 'ModifiedOn', 'ModifiedBy', 'board', 'current_player', 'winner', 'winning_cells', 'is_draw', 'game_mode']
       };
       
       const response = await apperClient.fetchRecords('game_state', params);
@@ -48,8 +48,7 @@ class GameStateService {
       return await this.createDefaultGameState();
     }
   }
-
-  async createDefaultGameState() {
+async createDefaultGameState() {
     try {
       const defaultGameState = {
         Name: 'Default Game',
@@ -142,12 +141,12 @@ class GameStateService {
 
   async saveGameState(gameState, existingId = null) {
     try {
-      const dbGameState = {
+const dbGameState = {
         board: JSON.stringify(gameState.board),
         current_player: gameState.currentPlayer,
         winner: gameState.winner || '',
         winning_cells: JSON.stringify(gameState.winningCells || []),
-        is_draw: gameState.isDraw,
+        is_draw: Boolean(gameState.isDraw),
         game_mode: gameState.gameMode
       };
 
