@@ -9,13 +9,17 @@ const apperClient = new ApperClient({
 });
 
 // Mock data for fallback - when database is unavailable or returns errors
+// Mock data for fallback - when database is unavailable or returns errors
 const mockGameState = {
   board: [['', '', ''], ['', '', ''], ['', '', '']],
   currentPlayer: 'X',
   winner: null,
   winningCells: [],
+  isDraw: false,
+  gameMode: 'two-player'
+};
+
 class GameStateService {
-  
   async getGameState() {
     try {
       const params = {
