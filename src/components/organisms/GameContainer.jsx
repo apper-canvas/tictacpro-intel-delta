@@ -21,8 +21,8 @@ const GameContainer = () => {
     winningCells: [],
     isDraw: false,
     gameMode: 'two-player'
-  });
-const [score, setScore] = useState({ playerX: 0, playerO: 0, draws: 0 });
+});
+  const [score, setScore] = useState({ playerX: 0, playerO: 0, draws: 0 });
   const [aiDifficulty, setAiDifficulty] = useState('easy');
   const [loading, setLoading] = useState(false);
   const [aiThinking, setAiThinking] = useState(false);
