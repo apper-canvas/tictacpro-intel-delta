@@ -1,4 +1,4 @@
-// ScoreService for managing game scores
+// Score service for managing game scores
 import { toast } from 'react-toastify';
 
 const { ApperClient } = window.ApperSDK;
