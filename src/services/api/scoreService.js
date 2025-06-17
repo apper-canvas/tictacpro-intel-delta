@@ -1,6 +1,6 @@
+// ScoreService for managing game scores
 import { toast } from 'react-toastify';
 
-// Initialize ApperClient
 const { ApperClient } = window.ApperSDK;
 const apperClient = new ApperClient({
   apperProjectId: import.meta.env.VITE_APPER_PROJECT_ID,
@@ -11,7 +11,7 @@ class ScoreService {
   async getScore() {
     try {
       const params = {
-        Fields: ['Name', 'Tags', 'Owner', 'player_x', 'player_o', 'draws']
+        fields: ['Name', 'Tags', 'Owner', 'player_x', 'player_o', 'draws']
       };
       
       const response = await apperClient.fetchRecords('score', params);
