@@ -1,12 +1,19 @@
 import { toast } from 'react-toastify';
 import aiService from './aiService.js';
 
+// Initialize ApperClient
 const { ApperClient } = window.ApperSDK;
 const apperClient = new ApperClient({
   apperProjectId: import.meta.env.VITE_APPER_PROJECT_ID,
   apperPublicKey: import.meta.env.VITE_APPER_PUBLIC_KEY
 });
 
+// Mock data for fallback - when database is unavailable or returns errors
+const mockGameState = {
+  board: [['', '', ''], ['', '', ''], ['', '', '']],
+  currentPlayer: 'X',
+  winner: null,
+  winningCells: [],
 class GameStateService {
   
   async getGameState() {
